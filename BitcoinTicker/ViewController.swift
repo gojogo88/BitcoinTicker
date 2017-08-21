@@ -7,12 +7,17 @@
 //
 
 import UIKit
+import Alamofire
+import SwiftyJSON
 
 class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
     
     let baseURL = "https://apiv2.bitcoinaverage.com/indices/global/ticker/BTC"
     let currencyArray = ["AUD", "BRL","CAD","CNY","EUR","GBP","HKD","IDR","ILS","INR","JPY","MXN","NOK","NZD","PLN","RON","RUB","SEK","SGD","USD","ZAR"]
+    let currencySymbolArray = ["AU$", "R$", "$", "RMB", "€", "£", "$", "₨", "₪", "₹", "¥", "₱", "kr", "NZ$", "zł", "lei", "₽", "kr", "S$", "$", "zł"]
+
     var finalURL = ""
+    var currencySelected = ""
 
     //Pre-setup IBOutlets
     @IBOutlet weak var bitcoinPriceLabel: UILabel!
@@ -42,55 +47,75 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         return currencyArray[row]
     }
     
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        //let currencySelected = currencyArray[row] as String
+        //print(currencySelected)
+        print(currencyArray[row])    //same as the two lines above
+        
+        
+        currencySelected = currencySymbolArray[row]
+        
+
+        finalURL = baseURL + currencyArray[row]
+        print(finalURL)
+        getBitcoinData(url: finalURL)
+
+        
+    }
 
     
     
     
-//    
-//    //MARK: - Networking
-//    /***************************************************************/
-//    
-//    func getWeatherData(url: String, parameters: [String : String]) {
-//        
-//        Alamofire.request(url, method: .get, parameters: parameters)
-//            .responseJSON { response in
-//                if response.result.isSuccess {
-//                    
-//                    print("Sucess! Got the weather data")
-//                    let weatherJSON : JSON = JSON(response.result.value)
-//                    
-//                    self.updateWeatherData(json: weatherJSON)
-//                    
-//                } else {
-//                    print("Error: \(response.result.error)")
-//                    self.cityLabel.text = "Connection Issues"
-//                }
-//        }
-//        
-//    }
-//    
-//    
-//    
-//    
-//    
-//    //MARK: - JSON Parsing
-//    /***************************************************************/
-//    
-//    func updateWeatherData(json : JSON) {
-//        
-//        let tempResult = json["main"]["temp"].double
-//        
-//        weatherData.temperature = Int(round(tempResult!) - 273.15)
-//        weatherData.city = json["name"].stringValue
-//        weatherData.condition = json["weather"][0]["id"].intValue
-//        weatherData.weatherIconName = weatherData.updateWeatherIcon(condition: weatherData.condition)
-//        
-//        updateUIWithWeatherData()
-//    }
-//    
+    
+    //MARK: - Networking
+    /***************************************************************/
+    
+    func getBitcoinData(url: String) {
+        
+        Alamofire.request(url, method: .get).responseJSON {
+            response in
+                if response.result.isSuccess {
+                    
+                    print("Sucess! Got the Bitcoin data")
+                    let bitcoinJSON : JSON = JSON(response.result.value!)
+                    
+                    self.updateBitcoinData(json: bitcoinJSON)
+                    
+                } else {
+                    print("Error: \(String(describing: response.result.error as Any))")
+                    self.bitcoinPriceLabel.text = "Connection Issues"
+                }
+        }
 
-
-
-
+    }
+    
+    //MARK: - JSON Parsing
+    /***************************************************************/
+    
+    func updateBitcoinData(json : JSON) {
+        
+        if let bitcoinResult = json["ask"].double {
+        
+            bitcoinPriceLabel.text = currencySelected + " " + String(bitcoinResult.truncate(places: 2).withCommas())
+            
+        } else {
+            
+            bitcoinPriceLabel.text = "Connection Issues"
+        }
+    }
+    
 }
 
+extension Double
+{
+    func truncate(places : Int)-> Double
+    {
+        return Double(floor(pow(10.0, Double(places)) * self)/pow(10.0, Double(places)))
+    }
+
+    func withCommas() -> String {
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = NumberFormatter.Style.decimal
+        return numberFormatter.string(from: NSNumber(value:self))!
+    }
+}
